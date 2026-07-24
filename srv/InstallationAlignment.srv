@@ -1,0 +1,35 @@
+# ADV-153: request the Advanced Navigation device store a new Installation Alignment
+# (ANPP packet 185, "Installation Alignment Packet") - the fixed rotation between the IMU's own
+# body frame and the vehicle/reference frame it's physically mounted in.
+#
+# This service only ever sets a roll/pitch offset (a "make the sensor think it's level"
+# correction) - yaw/heading alignment is intentionally left untouched (sent as 0 offset), since
+# heading is separately handled via the dual-antenna GNSS solution (see
+# docs/ADV-153-certus-odom-integration-plan.md in the certus_eval repo).
+#
+# IMPORTANT: the vehicle must be stationary on a LEVEL surface when this is called. Any actual
+# ground tilt present at calibration time will be misinterpreted as sensor mounting misalignment
+# and (if `permanent` is true) baked into the device's persisted configuration until corrected
+# again.
+# (Certus ANPP: https://docs.advancednavigation.com/certus/ANPP/InstallationAlignmentPacket.htm)
+
+# Change Permanency.
+# If this is set to false (0) the change will happen but will not be saved to onboard flash. Upon
+# restarting the device it will reset to the last permanent alignment.
+# If this is set to true (1) the change will occur and will overwrite the flash memory on the
+# device. This state will be saved and used when the device is restarted.
+bool permanent
+
+# Roll offset in radians (rotation about the vehicle's forward/X axis) - the fixed tilt to
+# subtract out, typically the sensor's own reported roll while sitting stationary and level.
+float64 roll
+
+# Pitch offset in radians (rotation about the vehicle's left/Y axis) - the fixed tilt to subtract
+# out, typically the sensor's own reported pitch while sitting stationary and level.
+float64 pitch
+
+---
+# Response
+
+# Acknowledgement response from device
+adnav_interfaces/RawAcknowledge acknowledgement

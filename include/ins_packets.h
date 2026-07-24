@@ -1460,6 +1460,11 @@ int decode_packet_periods_packet(packet_periods_packet_t* packet_periods_packet,
 an_packet_t* encode_packet_periods_packet(packet_periods_packet_t* packet_periods_packet);
 int decode_baud_rates_packet(baud_rates_packet_t* baud_rates_packet, an_packet_t* an_packet);
 an_packet_t* encode_baud_rates_packet(baud_rates_packet_t* baud_rates_packet);
+// ADV-153: these two were implemented in ins_packets.c but never declared here, so
+// adnav_driver couldn't call them - added for the Installation Alignment service
+// (an-ros-common/srv/InstallationAlignment.srv).
+int decode_installation_alignment_packet(installation_alignment_packet_t* installation_alignment_packet, an_packet_t* an_packet);
+an_packet_t* encode_installation_alignment_packet(installation_alignment_packet_t* installation_alignment_packet);
 int decode_filter_options_packet(filter_options_packet_t* filter_options_packet, an_packet_t* an_packet);
 an_packet_t* encode_filter_options_packet(filter_options_packet_t* filter_options_packet);
 int decode_gpio_configuration_packet(gpio_configuration_packet_t* gpio_configuration_packet, an_packet_t* an_packet);
