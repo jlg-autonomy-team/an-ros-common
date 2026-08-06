@@ -31,8 +31,33 @@
 namespace adnav::ntrip {
 
     bool Client::run(void) {
+        if (service_is_running_.load()) return true;
+
+        if (protocol_ != NTRIP_PROTOCOL_AUTO) {
+            return run_with_protocol(protocol_);
+        }
+
+        // A number of older casters reject the HTTP/1.1 + Ntrip-Version header
+        // instead of ignoring it.  Try v2 first, then retry the same endpoint
+        // with the NTRIP v1 handshake only for negotiation-style failures.
+        if (run_with_protocol(NTRIP_PROTOCOL_V2)) return true;
+
+        const auto v2_failure = service_failure_.load();
+        if (v2_failure == NTRIP_UNRECOGNIZED_RETURN ||
+            v2_failure == NTRIP_REMOTE_CLOSE ||
+            v2_failure == NTRIP_CONNECTION_TIMEOUT_FAILURE) {
+            log_fn_("NTRIP v2 handshake failed; retrying with NTRIP v1.\r\n");
+            return run_with_protocol(NTRIP_PROTOCOL_V1);
+        }
+
+        return false;
+    }
+
+    bool Client::run_with_protocol(adnav_ntrip_protocol_e protocol) {
         // Don't restart service if it is running.
         if(service_is_running_.load()) return true;
+
+        service_failure_.store(NTRIP_NO_FAIL);
 
         // Closes any current connection and opens new connection
         if (!establish_new_connection()) return false;
@@ -44,20 +69,10 @@ namespace adnav::ntrip {
             gga_update_.store(true);
         }
 
-        // Form the corrections request
-        std::stringstream request;
+        // Form the corrections request using the selected protocol's handshake.
+        const std::string request = build_request(false, protocol);
 
-        request << "GET /" << mountpoint_ << " HTTP/1.1\r\n" <<
-        "Host: " << server_ip_ << ":" << std::to_string(server_port_) << "\r\n" <<
-        "Ntrip-Version: Ntrip/2.0\r\n" <<
-        "User-Agent: " << user_agent_ << "\r\n" <<
-        "Accept: */*\r\n" <<
-        "Authorization: Basic " << encode_credentials() << "\r\n" <<
-        "Ntrip-GGA: " << gga_string_ << "\r\n" <<
-        "Connection: close\r\n" <<
-        "\r\n";
-
-        if (send(socket_fd_, request.str().c_str(), request.str().size(), 0) < 0) {
+        if (send(socket_fd_, request.c_str(), request.size(), 0) < 0) {
             log_err_fn_("Sending HTTP request failed!\r\n");
             service_failure_.store(NTRIP_SEND_REQUEST_FAILURE);
             stop();
@@ -80,28 +95,27 @@ namespace adnav::ntrip {
                 // Store the buffered data into a string
                 std::string result(buffer.get(), ret);
 
-                // Check to see if there is a recognized header
-                if ((result.find("HTTP/1.1 200 OK") != std::string::npos) ||
-                    (result.find("ICY 200 OK") != std::string::npos) ||
-                    (result.find("HTTP/1.0 200 OK") != std::string::npos) ||
-                    (result.find("SOURCETABLE 200 OK") != std::string::npos)) {
+                // Check to see if there is a recognized header.  Match status
+                // codes independently of HTTP minor version so v1 error
+                // responses are not reported as an opaque "unknown" error.
+                if (response_has_status(result, 200)) {
 
                     // Break the waiting loop.
                     break;
 
-                } else if(result.find("HTTP/1.1 401") != std::string::npos)
+                } else if(response_has_status(result, 401))
                 {
                     log_err_fn_("NTRIP Server Access Unauthorized.\r\n" + result + "\r\n");
                     service_failure_.store(NTRIP_UNAUTHORIZED);
                     stop();
                     return false;
-                } else if(result.find("HTTP/1.1 403") != std::string::npos)
+                } else if(response_has_status(result, 403))
                 {
                     log_err_fn_("NTRIP Server Access Forbidden.\r\n" + result + "\r\n");
                     service_failure_.store(NTRIP_FORBIDDEN);
                     stop();
                     return false;
-                } else if(result.find("HTTP/1.1 404") != std::string::npos)
+                } else if(response_has_status(result, 404))
                 {
                     log_err_fn_("NTRIP Server Resource Not Found.\r\n" + result + "\r\n");
                     service_failure_.store(NTRIP_NOT_FOUND);
@@ -135,6 +149,8 @@ namespace adnav::ntrip {
             return false;
         }
 
+        protocol_ = protocol;
+
         // Start the thread. join it if it is currently running.
         if (thread_.joinable()) thread_.join();
         thread_ = std::move(std::thread(&adnav::ntrip::Client::thread_handler, this));
@@ -143,22 +159,35 @@ namespace adnav::ntrip {
     }
 
     bool Client::retrieve_sourcetable(void) {
+        if (protocol_ != NTRIP_PROTOCOL_AUTO) {
+            return retrieve_sourcetable_with_protocol(protocol_);
+        }
+
+        if (retrieve_sourcetable_with_protocol(NTRIP_PROTOCOL_V2)) return true;
+
+        const auto v2_failure = service_failure_.load();
+        if (v2_failure == NTRIP_UNRECOGNIZED_RETURN ||
+            v2_failure == NTRIP_REMOTE_CLOSE ||
+            v2_failure == NTRIP_CONNECTION_TIMEOUT_FAILURE) {
+            log_fn_("NTRIP v2 sourcetable request failed; retrying with NTRIP v1.\r\n");
+            return retrieve_sourcetable_with_protocol(NTRIP_PROTOCOL_V1);
+        }
+
+        return false;
+    }
+
+    bool Client::retrieve_sourcetable_with_protocol(adnav_ntrip_protocol_e protocol) {
+        service_failure_.store(NTRIP_NO_FAIL);
+
         // Closes any current on
         if (!establish_new_connection()) return false;
-        std::stringstream request;
         int ret = -1;
         std::unique_ptr<char[]>  buffer = std::make_unique<char[]>(NTRIP_BUFFER_SIZE);
 
         // Form the Sourcetable request
-        request << "GET / HTTP/1.1\r\n" <<
-        "Host: " << server_ip_ << ":" << std::to_string(server_port_) << "\r\n" <<
-        "Authorisation: Basic " << encode_credentials() << "\r\n" <<
-        "Ntrip-Version: Ntrip/2.0\r\n" <<
-        "User-Agent: " << user_agent_ << "\r\n" <<
-        "Accept: */*\r\n" <<
-        "Connection: close\r\n\r\n";
+        const std::string request = build_request(true, protocol);
 
-        if (send(socket_fd_, request.str().c_str(), request.str().size(), 0) < 0) {
+        if (send(socket_fd_, request.c_str(), request.size(), 0) < 0) {
             log_err_fn_("Sending SOURCETABLE request failed!\r\n");
             service_failure_.store(NTRIP_SEND_REQUEST_FAILURE);
             stop();
@@ -180,11 +209,8 @@ namespace adnav::ntrip {
                 // store the buffered data into a string
                 std::string result(buffer.get(), ret);
 
-                // Check to see if there is an recognized header or seen a recognized header previously.
-                if ((result.find("HTTP/1.1 200 OK") != std::string::npos) ||
-                    (result.find("ICY 200 OK") != std::string::npos) ||
-                    (result.find("HTTP/1.0 200 OK") != std::string::npos) ||
-                    (result.find("SOURCETABLE 200 OK") != std::string::npos)) {
+                // Check to see if there is a recognized header or seen a recognized header previously.
+                if (response_has_status(result, 200)) {
 
                     // Print out the request result using the logging function.
                     log_fn_("Sourcetable response from " + server_ip_ + ":" +
@@ -195,6 +221,27 @@ namespace adnav::ntrip {
                 else if (header)
                 {
                     log_fn_(result);
+                }
+                else if (response_has_status(result, 401))
+                {
+                    log_err_fn_("NTRIP Sourcetable access unauthorized.\r\n" + result + "\r\n");
+                    service_failure_.store(NTRIP_UNAUTHORIZED);
+                    stop();
+                    return false;
+                }
+                else if (response_has_status(result, 403))
+                {
+                    log_err_fn_("NTRIP Sourcetable access forbidden.\r\n" + result + "\r\n");
+                    service_failure_.store(NTRIP_FORBIDDEN);
+                    stop();
+                    return false;
+                }
+                else if (response_has_status(result, 404))
+                {
+                    log_err_fn_("NTRIP Sourcetable not found.\r\n" + result + "\r\n");
+                    service_failure_.store(NTRIP_NOT_FOUND);
+                    stop();
+                    return false;
                 }
                 else
                 {
@@ -216,6 +263,39 @@ namespace adnav::ntrip {
         stop();
 
         return false;
+    }
+
+    std::string Client::build_request(bool sourcetable, adnav_ntrip_protocol_e protocol) const {
+        std::stringstream request;
+        const std::string path = sourcetable ? "/" : "/" + mountpoint_;
+
+        if (protocol == NTRIP_PROTOCOL_V1) {
+            request << "GET " << path << " HTTP/1.0\r\n";
+        } else {
+            request << "GET " << path << " HTTP/1.1\r\n" <<
+                "Host: " << server_ip_ << ":" << std::to_string(server_port_) << "\r\n" <<
+                "Ntrip-Version: Ntrip/2.0\r\n";
+        }
+
+        request << "User-Agent: " << user_agent_ << "\r\n" <<
+            "Accept: */*\r\n" <<
+            "Authorization: Basic " << encode_credentials() << "\r\n";
+
+        // Ntrip-GGA is a v2 request header.  The v1-compatible behavior is to
+        // send the GGA sentence on the established stream, which thread_handler
+        // already does periodically.
+        if (!sourcetable && protocol == NTRIP_PROTOCOL_V2) {
+            request << "Ntrip-GGA: " << gga_string_ << "\r\n";
+        }
+
+        request << "Connection: close\r\n\r\n";
+        return request.str();
+    }
+
+    bool Client::response_has_status(const std::string& response, int status_code) const {
+        const std::size_t line_end = response.find("\r\n");
+        const std::string status_line = response.substr(0, line_end);
+        return status_line.find(" " + std::to_string(status_code)) != std::string::npos;
     }
 
     void Client::stop(void) {
@@ -395,7 +475,7 @@ namespace adnav::ntrip {
      *
      * @return encoded string of username:password
     */
-    std::string Client::encode_credentials(void) {
+    std::string Client::encode_credentials(void) const {
         std::string usr_pwd = user_ + ":" + passwd_;
         std::string encoded;
         adnav::utils::Base64Encode(usr_pwd, &encoded);

@@ -80,6 +80,15 @@ namespace ntrip {
         NTRIP_UNRECOGNIZED_RETURN
     }adnav_ntrip_connection_e;
 
+    // NTRIP v1 and v2 use the same RTCM stream, but their HTTP handshakes differ.
+    // AUTO tries the modern handshake first and falls back to the legacy one when
+    // the caster rejects or closes the v2 request during negotiation.
+    typedef enum {
+        NTRIP_PROTOCOL_AUTO,
+        NTRIP_PROTOCOL_V1,
+        NTRIP_PROTOCOL_V2
+    }adnav_ntrip_protocol_e;
+
     class Client {
      public:
         Client(Client const&) = delete;
@@ -172,6 +181,10 @@ namespace ntrip {
             report_interval_ = interval;
         }
 
+        void set_protocol(adnav_ntrip_protocol_e protocol) {
+            protocol_ = protocol;
+        }
+
         // Status Functions
         bool run(void);
         bool retrieve_sourcetable(void);
@@ -223,8 +236,12 @@ namespace ntrip {
      private:
 
         void thread_handler(void);
+          bool run_with_protocol(adnav_ntrip_protocol_e protocol);
+          bool retrieve_sourcetable_with_protocol(adnav_ntrip_protocol_e protocol);
         bool establish_new_connection(void);
-        std::string encode_credentials(void);
+        std::string encode_credentials(void) const;
+          std::string build_request(bool sourcetable, adnav_ntrip_protocol_e protocol) const;
+          bool response_has_status(const std::string& response, int status_code) const;
 
         std::atomic<adnav_ntrip_connection_e> service_failure_ = {NTRIP_NO_FAIL};
         std::atomic_bool service_is_running_ = {false};
@@ -245,6 +262,7 @@ namespace ntrip {
         std::string user_;
         std::string passwd_;
         std::string mountpoint_;
+        adnav_ntrip_protocol_e protocol_ = NTRIP_PROTOCOL_AUTO;
         #if defined(WIN32) || defined(_WIN32)
             SOCKET socket_fd_ = INVALID_SOCKET;
         #else
