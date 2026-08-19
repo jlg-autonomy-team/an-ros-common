@@ -1,4 +1,4 @@
-# This contains the data structure of ANPP Packet 35. The NED Velocity Packet.
+# This contains the data structure of ANPP Packet 36. The Body Velocity Packet.
 #
 # Specified using the Advanced Navigation Packet Protocol
 #
@@ -16,5 +16,5 @@ std_msgs/Header header
 # ANPP Header
 adnav_interfaces/ANPPHeader anpp_header
 
-# Velocity in body frame (m/s)
+# Velocity in the body frame (m/s). This packet contains no uncertainty estimate.
 geometry_msgs/Vector3 velocity
