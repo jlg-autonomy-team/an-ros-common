@@ -3,8 +3,8 @@
 # Specified using the Advanced Navigation Packet Protocol
 #
 # ADV-153: North/East/Down velocity (m/s), native NED navigation frame. This is a raw diagnostic
-# topic only; the current bridge uses packet-20 velocity for /ins/twist and does not consume Packet
-# 35 or rotate it into the body frame.
+# topic only; the current bridge uses packet-20 velocity plus packet-25 covariance for /ins/twist
+# and rotates the matched pair into the imu_link body frame.
 
 # header.stamp specifies the ROS time this measurement was decoded.
 #

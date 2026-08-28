@@ -3,7 +3,8 @@
 # Specified using the Advanced Navigation Packet Protocol
 #
 # ADV-153: raw Packet 36 velocity. This topic is diagnostic only in the current pipeline; the
-# bridge does not consume or synthesize body velocity for /ins/twist.
+# bridge intentionally uses matched Packet 20 plus Packet 25 and rotates both with one matrix for
+# /ins/twist; this Packet 36 topic remains diagnostic-only.
 
 # header.stamp specifies the ROS time this measurement was decoded.
 #
