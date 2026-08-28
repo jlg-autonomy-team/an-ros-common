@@ -2,9 +2,8 @@
 #
 # Specified using the Advanced Navigation Packet Protocol
 #
-# ADV-153: Body acceleration XYZ (m/s/s), native FRD body frame - the lightweight replacement for
-# Packet 20's embedded body acceleration field. Published raw here (FRD); the FRD->FLU static
-# flip (x, -y, -z) is applied separately for imu.linear_acceleration.
+# ADV-153: raw Packet 38 body acceleration. This topic is diagnostic only in the current
+# pipeline; /ins/imu uses Packet 28 raw sensor acceleration instead.
 
 # header.stamp specifies the ROS time this measurement was decoded.
 #

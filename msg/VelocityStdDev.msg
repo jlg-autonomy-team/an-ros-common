@@ -2,11 +2,9 @@
 #
 # Specified using the Advanced Navigation Packet Protocol
 #
-# ADV-153: standard deviation of North/East/Down velocity (m/s) - intentionally kept in the same
-# NED nav frame as Packet 35 (NedVelocity). See the design doc's "single-rotation" design: the
-# bridge package rotates this covariance and Packet 35's mean into body frame together, in one
-# operation, using the same current-orientation rotation matrix, so the mean and covariance can
-# never end up inconsistent with each other.
+# ADV-153: standard deviation of North/East/Down velocity (m/s), retained in the native NED
+# navigation frame. The current bridge uses these values as the diagonal covariance for the
+# packet-20 linear velocity copied into /ins/twist; it does not rotate them or consume Packet 35.
 
 # header.stamp specifies the ROS time this measurement was decoded.
 #
