@@ -165,8 +165,8 @@ extern "C"
      * \brief A blocking version of comRead().
      * \param[in] index port index
      * \param[in] buffer pointer to receive buffer
-     * \param[out] len length of receive buffer in bytes
-     * \param[in] maximum number of ms to wait until 'len' bytes are received.
+      * \param[in] len length of receive buffer in bytes
+      * \param[in] timeout maximum number of milliseconds to wait until 'len' bytes are received.
      * \return number of bytes transferred
      */
     int comReadBlocking(int index, unsigned char *buffer, size_t len, unsigned timeout);
@@ -174,7 +174,7 @@ extern "C"
     /**
      * \brief Set DTR Line
      * \param[in] index port index
-     * \param[in] new state of DTR line
+      * \param[in] state state of DTR line
      * \return 0 on failure otherwise 1
      */
     int comSetDtr(int index, int state);
@@ -182,7 +182,7 @@ extern "C"
     /**
      * \brief Set RTS Line
      * \param[in] index port index
-     * \param[in] new state of RTS line
+      * \param[in] state state of RTS line
      * \return 0 on failure otherwise 1
      */
     int comSetRts(int index, int state);

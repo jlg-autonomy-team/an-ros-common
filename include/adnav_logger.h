@@ -68,7 +68,7 @@ class Logger : public std::ofstream{
 
         /**
          * @brief Function to open an output Logging file stream at a given file path.
-         * It will name the file <prefix>_YY-MM-DD_HH-MM-SS<filetype>
+         * It will name the file @c prefix_YY-MM-DD_HH-MM-SS followed by @c file_type.
          *
          * @param prefix The prefix in the filename
          * @param file_type The filetype suffix for the file. 
@@ -162,7 +162,8 @@ class Logger : public std::ofstream{
         /**
          * @brief Function to take the individual elements of the filename and turn them into the
          * private filename member. 
-         * This places it into the format <path><prefix>_YY-MM-DD_HH-MM-SS<file_type>
+         * This places it into the format @c path followed by @c prefix_YY-MM-DD_HH-MM-SS
+         * and @c file_type.
         */
         void setFilename(const std::string& prefix, const std::string& file_type,
             const std::string& path = ""){

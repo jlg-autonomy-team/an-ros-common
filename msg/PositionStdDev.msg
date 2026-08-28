@@ -4,9 +4,9 @@
 #
 # ADV-153: standard deviation of latitude/longitude/height, already expressed in metres (not
 # degrees/radians) by the device - a local-level (North/East/Up-magnitude) decomposition, not a
-# raw ECEF standard deviation. See the design doc (ADV-153-certus-odom-integration-plan.md, S3
-# "Covariance sources") for how this maps onto the bridge package's local ENU position covariance
-# without needing a rotation.
+# raw ECEF standard deviation. See docs/02-data-and-frame-contracts.md in certus_eval for the
+# current contract and source provenance. The bridge maps these values onto local ENU position
+# covariance without needing a rotation.
 
 # header.stamp specifies the ROS time this measurement was decoded.
 #

@@ -338,7 +338,7 @@ namespace utils {
     /**
      * @brief Function to turn a degree into DDMM formatt used in NMEA GPGGA String
      *
-     * @param degree double constant reference of the degree value to convert
+      * @param decimal_degrees double constant reference of the degree value to convert
      * @param longitude boolean constant for formatting the DDM string.
      * 0 = Latitude
      * 1 = Longitude

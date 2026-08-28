@@ -5,7 +5,7 @@
 # This service only ever sets a roll/pitch offset (a "make the sensor think it's level"
 # correction) - yaw/heading alignment is intentionally left untouched (sent as 0 offset), since
 # heading is separately handled via the dual-antenna GNSS solution (see
-# docs/ADV-153-certus-odom-integration-plan.md in the certus_eval repo).
+# docs/07-plan.md in the certus_eval repo).
 #
 # IMPORTANT: the vehicle must be stationary on a LEVEL surface when this is called. Any actual
 # ground tilt present at calibration time will be misinterpreted as sensor mounting misalignment
