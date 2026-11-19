@@ -59,7 +59,7 @@
 #include "adnav_utils.h"
 #include "ins_packets.h"
 
-#define NTRIP_TIMEOUT_PERIOD 3
+#define NTRIP_TIMEOUT_PERIOD 15
 #define NTRIP_BUFFER_SIZE 4096
 
 namespace adnav {
