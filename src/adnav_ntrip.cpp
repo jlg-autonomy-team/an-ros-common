@@ -346,14 +346,19 @@ namespace adnav::ntrip {
                 service_failure_.store(NTRIP_REMOTE_CLOSE);
                 break;
             } else if (ret < 0) { // socket has errored.
+                const int receive_error = errno;
                 // Check errno to see if it has errored due to an error
                 // and not due to no data on non-blocking socket.
-                if ((errno !=0) && (errno != EAGAIN) &&
-                    (errno != EWOULDBLOCK) && (errno != EINTR)) {
-                    log_err_fn_("Remote socket error, errno = " + std::to_string(errno) +
-                        "\r\nstderr msg: " + std::strerror(errno) + "\r\n");
+                if ((receive_error !=0) && (receive_error != EAGAIN) &&
+                    (receive_error != EWOULDBLOCK) && (receive_error != EINTR)) {
+                    log_err_fn_("Remote socket error, errno = " + std::to_string(receive_error) +
+                        "\r\nstderr msg: " + std::strerror(receive_error) + "\r\n");
                     service_failure_.store(NTRIP_REMOTE_SOCKET_FAILURE);
                     break;
+                }
+
+                if (receive_error == EAGAIN || receive_error == EWOULDBLOCK) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
 
                 // no data recieved check for timeout.
