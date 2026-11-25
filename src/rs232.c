@@ -442,8 +442,8 @@ static const char *devBases[] = {
 static int noBases = 1;
 #else
 static const char *devBases[] = {
-    "ttyACM", "ttyUSB", "rfcomm", "ttyS"};
-static int noBases = 4;
+    "ttyACM", "ttyUSB", "rfcomm", "ttyS", "ttyTHS"};
+static int noBases = 5;
 #endif
 
 /*****************************************************************************/
